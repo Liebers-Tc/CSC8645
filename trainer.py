@@ -12,7 +12,7 @@ class Trainer:
                  optimizer=None, scheduler=None, use_amp=True, 
                  save_dir=None, resume_path=None,
                  early_stopping_patience=None,
-                 wandb=False, vis_num_sample=1):
+                 wandb=False, vis_num_sample=None):
 
         self.model = model.to(device)
         self.train_loader = train_loader
@@ -60,7 +60,7 @@ class Trainer:
             for i, (images, masks) in enumerate(loop):
                 images, masks = images.to(self.device), masks.to(self.device)
 
-                with autocast(enabled=self.use_amp):
+                with autocast(device_type=self.device, enabled=self.use_amp):
                     outputs = self.model(images)
                     loss = self.loss_fn(outputs, masks)
                     metrics = self.metric_fn(outputs, masks)
@@ -81,14 +81,9 @@ class Trainer:
                 if not train and i == 0:
                     self.visualizer.plot_demo(images[0], masks[0], torch.argmax(outputs[0], dim=0), step=epoch)
 
-        if train and self.scheduler:
-            if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                self.scheduler.step(total_loss)
-            else:
-                self.scheduler.step()
-
         avg_metrics = {k: v / len(loader) for k, v in total_metrics.items()}
         avg_metrics['loss'] = total_loss / len(loader)
+
         return avg_metrics
 
     def save_checkpoint(self, filename="checkpoint.pt", epoch=None):
@@ -113,7 +108,6 @@ class Trainer:
 
     def load_checkpoint(self):
         if not self.resume_path or not os.path.exists(self.resume_path):
-            print(f"\nNot found model from: {self.resume_path}")
             self.start_epoch = 0
             return
 
@@ -146,8 +140,21 @@ class Trainer:
             for k in train_stats:
                 self.logger.log_scalar(f"Metric/train/{k}", train_stats[k], epoch)
 
-            self.logger.log_text(epoch, train_stats['loss'], train_stats, val_stats['loss'], val_stats)
+            main_metric = self.main_metric
+            self.logger.log_text(
+                epoch,
+                train_stats['loss'],
+                train_stats.get(main_metric, 0.0),
+                val_stats['loss'],
+                val_stats.get(main_metric, 0.0)
+            )
 
+            if self.scheduler:
+                if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                    self.scheduler.step(val_stats.get(main_metric, val_stats['loss']))
+                else:
+                    self.scheduler.step()
+                    
             main_val = val_stats.get(self.main_metric)
             if main_val is None:
                 print(f"\n[Warning] Main metric '{self.main_metric}' not found in validation metrics list {self.metric_fn.keys()}")

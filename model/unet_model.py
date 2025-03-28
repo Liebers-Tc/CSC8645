@@ -3,7 +3,7 @@ from torch.utils.checkpoint import checkpoint_sequential
 
 
 class UNet(nn.Module):
-    def __init__(self, in_channels=3, num_classes=103, base_channels=64, bilinear=False):
+    def __init__(self, in_channels=3, num_classes=104, base_channels=64, bilinear=False):
         super(UNet, self).__init__()
 
         # Encoder

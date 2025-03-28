@@ -1,4 +1,3 @@
-import os
 import argparse
 import torch
 from torch.utils.data import DataLoader
@@ -7,10 +6,6 @@ from utils.dataloader import FoodSegDataset
 from utils.loss import get_loss
 from utils.metrics import get_metric
 from trainer import Trainer
-from utils.path_utils import get_save_path
-import torchvision.transforms as T
-from PIL import Image
-import numpy as np
 
 
 def parse_args():
@@ -35,20 +30,8 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # Transforms
-    image_transform = T.Compose([
-        T.Resize((256, 256)),
-        T.ToTensor(),
-        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    mask_transform = T.Compose([
-        T.Resize((256, 256), interpolation=Image.NEAREST),
-        T.Lambda(lambda m: torch.as_tensor(np.array(m), dtype=torch.long).squeeze())
-    ])
-
     # DataLoader
-    dataset_args = dict(root_dir=args.dataset, image_transform=image_transform, mask_transform=mask_transform)
-    val_loader = DataLoader(FoodSegDataset(dataset='val', **dataset_args), batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
+    val_loader = DataLoader(FoodSegDataset(root_dir=args.dataset, dataset='val'), batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     # Model
     device = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -1,4 +1,3 @@
-import os
 import torch
 from torch.utils.data import DataLoader
 from model.unet_model import UNet
@@ -6,9 +5,6 @@ from utils.dataloader import FoodSegDataset
 from utils.loss import get_loss
 from utils.metrics import get_metric
 from trainer import Trainer
-import torchvision.transforms as T
-from PIL import Image
-import numpy as np
 
 # Parameters
 config = {
@@ -28,20 +24,8 @@ config = {
     'save_dir': 'result/run_1'
 }
 
-# Transforms
-image_transform = T.Compose([
-    T.Resize((256, 256)),
-    T.ToTensor(),
-    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-mask_transform = T.Compose([
-    T.Resize((256, 256), interpolation=Image.NEAREST),
-    T.Lambda(lambda m: torch.as_tensor(np.array(m), dtype=torch.long).squeeze())
-])
-
 # Dataloader
-dataset_args = dict(root_dir=config['dataset'], image_transform=image_transform, mask_transform=mask_transform)
-val_loader = DataLoader(FoodSegDataset(dataset='val', **dataset_args), batch_size=config['batch_size'], shuffle=False, num_workers=config['num_workers'])
+val_loader = DataLoader(FoodSegDataset(root_dir=config['dataset'], dataset='val'), batch_size=config['batch_size'], shuffle=False, num_workers=config['num_workers'])
 
 # Model
 device = 'cuda' if torch.cuda.is_available() else 'cpu'

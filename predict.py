@@ -3,10 +3,7 @@ import torch
 from model.unet_model import UNet
 from utils.dataloader import FoodSegDataset
 from torch.utils.data import DataLoader
-import torchvision.transforms as T
-from PIL import Image
-import numpy as np
-from utils.visualization import save_demo
+from utils.visualization import Visualizer
 
 # Parameters
 config = {
@@ -21,19 +18,8 @@ config = {
     'save_dir': 'result/run_1'
 }
 
-# Transforms
-image_transform = T.Compose([
-    T.Resize((256, 256)),
-    T.ToTensor(),
-    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-mask_transform = T.Compose([
-    T.Resize((256, 256), interpolation=Image.NEAREST),
-    T.Lambda(lambda m: torch.as_tensor(np.array(m), dtype=torch.long).squeeze())
-])
-
 # Dataloader
-dataset = FoodSegDataset(dataset='val', root_dir=config['dataset'], image_transform=image_transform, mask_transform=mask_transform)
+dataset = FoodSegDataset(root_dir=config['dataset'], dataset='test')
 loader = DataLoader(dataset, batch_size=config['batch_size'], shuffle=False, num_workers=config['num_workers'])
 
 # Model
@@ -51,6 +37,9 @@ model.eval()
 save_dir = os.path.join(config['save_dir'], 'predict')
 os.makedirs(save_dir, exist_ok=True)
 
+# Visualizer
+visualizer = Visualizer(save_dir=save_dir)
+
 # Predict
 with torch.no_grad():
     for idx, (images, masks) in enumerate(loader):
@@ -62,6 +51,6 @@ with torch.no_grad():
             img = images[i].cpu()
             gt = masks[i].cpu()
             pred = torch.argmax(outputs[i].cpu(), dim=0)
-            save_demo(img, gt, pred, path=os.path.join(save_dir, f"{idx * config['batch_size'] + i}.png"))
+            visualizer.save_demo(img, gt, pred, path=os.path.join(save_dir, f"{idx * config['batch_size'] + i}.png"))
 
 print(f"\nPrediction images saved to: {save_dir}")
