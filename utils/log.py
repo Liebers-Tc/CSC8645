@@ -10,9 +10,6 @@ class Logger:
         os.makedirs(save_dir, exist_ok=True)
         self.log_path = os.path.join(save_dir, 'log.txt')
 
-        with open(self.log_path, 'w') as f:
-            f.write("epoch,train_loss,train_metric,val_loss,val_metric\n")
-
         if self.wandb:
             import wandb
             wandb.init(project=wandb_project, name=wandb_run_name)
@@ -22,17 +19,15 @@ class Logger:
             import wandb
             wandb.log({tag: value}, step=step)
 
-    def log_text(self, epoch, train_loss, train_metric, val_loss=None, val_metric=None):
+    def log_text(self, line):
         with open(self.log_path, 'a') as f:
-            line = f"{epoch},{train_loss:.4f},{train_metric:.4f}"
-            if val_loss is not None:
-                line += f",{val_loss:.4f},{val_metric:.4f}"
-            f.write(line + "\n")
+            f.write(line + '\n')
 
-    def plot_curve(self, x, y1, y2, title, ylabel, labels, save_path):
+    def plot_curve(self, x, y1, y2=None, title='', ylabel='', labels=None, save_path='curve.png'):
         plt.figure()
-        plt.plot(x, y1, label=labels[0])
-        plt.plot(x, y2, label=labels[1])
+        plt.plot(x, y1, label=labels[0] if labels else 'Line 1')
+        if y2:
+            plt.plot(x, y2, label=labels[1] if labels and len(labels) > 1 else 'Line 2')
         plt.title(title)
         plt.xlabel('Epoch')
         plt.ylabel(ylabel)
@@ -46,10 +41,13 @@ class Logger:
             plt.show()
         plt.close()
 
-    def save_curve(self, train_losses, val_losses, train_metrics, val_metrics, metric_name='mIoU'):
+    def save_curve(self, train_losses, val_losses, val_metrics_dict=None):
         epochs = range(1, len(train_losses) + 1)
         self.plot_curve(epochs, train_losses, val_losses, 'Loss Curve', 'Loss',
                         ['Train Loss', 'Val Loss'], os.path.join(self.save_dir, 'loss_curve.png'))
-        self.plot_curve(epochs, train_metrics, val_metrics, f'{metric_name} Curve', metric_name,
-                        [f'Train {metric_name}', f'Val {metric_name}'],
-                        os.path.join(self.save_dir, f'{metric_name.lower()}_curve.png'))
+        if val_metrics_dict:
+            for metric_name, val_values in val_metrics_dict.items():
+                self.plot_curve(epochs, val_values, None,
+                                f"Val {metric_name} Curve", metric_name.upper(),
+                                [f"Val {metric_name}"],
+                                os.path.join(self.save_dir, f"val_{metric_name.lower()}_curve.png"))

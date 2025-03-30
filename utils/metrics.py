@@ -8,6 +8,7 @@ class MeanIoU:
 
     def __call__(self, preds, targets):
         preds = torch.argmax(preds, dim=1)  # [B, H, W]
+        targets = targets.to(preds.device)
         ious = []
 
         for cls in range(self.num_classes):
@@ -22,7 +23,7 @@ class MeanIoU:
             else:
                 ious.append(intersection / union)
 
-        return torch.tensor(ious).nanmean()  # return mIoU
+        return torch.tensor(ious, device=preds.device).nanmean()  # return mIoU
 
 
 class DiceScore:
@@ -36,6 +37,7 @@ class DiceScore:
         targets: [B, H, W] (long)
         """
         preds = torch.argmax(preds, dim=1)  # [B, H, W]
+        targets = targets.to(preds.device)
         dice_scores = []
 
         for cls in range(self.num_classes):
@@ -44,7 +46,7 @@ class DiceScore:
             intersection = (pred_cls * target_cls).sum()
             union = pred_cls.sum() + target_cls.sum()
             if union == 0:
-                dice_scores.append(torch.tensor(1.0))  # class not exist, default dice=1
+                dice_scores.append(torch.tensor(1.0, device=preds.device))  # class not exist, default dice=1
             else:
                 dice_scores.append((2 * intersection + self.smooth) / (union + self.smooth))
         

@@ -5,6 +5,7 @@ from model.unet_model import UNet
 from utils.dataloader import FoodSegDataset
 from torch.utils.data import DataLoader
 from utils.visualization import Visualizer
+from utils.path_utils import find_lastest_path
 
 
 def parse_args():
@@ -15,9 +16,12 @@ def parse_args():
     parser.add_argument('--num_classes', type=int, default=104)
     parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--num_workers', type=int, default=8)
-    parser.add_argument('--use_amp', action='store_true')
     parser.add_argument('--pretrain_path', type=str, required=True)
-    parser.add_argument('--save_dir', type=str, required=True)
+    parser.add_argument('--save_dir', type=str, default=None, required=True)
+    parser.add_argument('--vis_num_sample', type=int, default=1)
+    parser.add_argument('--use_amp', action='store_true')
+    parser.add_argument('--wandb', action='store_true')
+
     return parser.parse_args()
 
 
@@ -39,11 +43,11 @@ def main():
     model.eval()
 
     # Path
-    save_dir = os.path.join(args.save_dir, 'predict')
+    save_dir = args.save_dir or find_lastest_path(root_dir='result')
     os.makedirs(save_dir, exist_ok=True)
 
     # Visualizer
-    visualizer = Visualizer(save_dir=save_dir)
+    visualizer = Visualizer(save_dir=save_dir, save=True, show=False, wandb=args.wandb, num_sample=args.vis_num_sample)
 
     # Predict
     with torch.no_grad():
@@ -52,12 +56,8 @@ def main():
             with torch.autocast(device_type=device, enabled=args.use_amp):
                 outputs = model(images)
 
-            for i in range(images.shape[0]):
-                img = images[i].cpu()
-                gt = masks[i].cpu()
-                pred = torch.argmax(outputs[i].cpu(), dim=0)
-                save_path = os.path.join(save_dir, f"{idx * args.batch_size + i}.png")
-                visualizer.save_demo(img, gt, pred, path=save_path)
+            outputs = torch.argmax(outputs, dim=1)
+            visualizer.save_demo(images, masks, outputs)
 
     print(f"\nPrediction images saved to: {save_dir}")
 

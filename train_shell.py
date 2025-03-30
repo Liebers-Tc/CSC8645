@@ -16,9 +16,9 @@ def parse_args():
     parser.add_argument('--model_name', type=str, default='unet') 
     parser.add_argument('--in_channels', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=104)
-    parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--num_workers', type=int, default=12)
+    parser.add_argument('--epochs', type=int, default=30)
 
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--scheduler', type=str, default='step')
@@ -27,13 +27,14 @@ def parse_args():
     parser.add_argument('--loss', type=str, default='ce')
     parser.add_argument('--metric', nargs='+', default=['miou', 'dice', 'acc'])
     parser.add_argument('--main_metric', type=str, default='miou')
+    parser.add_argument('--early_stopping_patience', type=int, default=3)
     
-    parser.add_argument('--use_amp', action='store_true')
-    parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--pretrain_path', type=str, default=None)
     parser.add_argument('--save_dir', type=str, default=None)
     parser.add_argument('--vis_num_sample', type=int, default=1)
-    parser.add_argument('--early_stopping_patience', type=int, default=3)
+    parser.add_argument('--use_amp', action='store_true')
+    parser.add_argument('--wandb', action='store_true')
+    
     return parser.parse_args()
 
 
@@ -72,13 +73,14 @@ def main():
                       main_metric=main_metric,
                       optimizer=optimizer,
                       scheduler=scheduler,
+                      early_stopping_patience=args.early_stopping_patience,
                       device=device,
                       use_amp=args.use_amp,
                       save_dir=save_dir,
                       resume_path=args.pretrain_path,
-                      early_stopping_patience=args.early_stopping_patience,
+                      vis_num_sample=args.vis_num_sample,
                       wandb=args.wandb,
-                      vis_num_sample=args.vis_num_sample)
+                      )
 
     # Start Training
     trainer.load_checkpoint()

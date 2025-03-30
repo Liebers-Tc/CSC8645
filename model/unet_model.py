@@ -1,5 +1,4 @@
 from .unet_parts import *
-from torch.utils.checkpoint import checkpoint_sequential
 
 
 class UNet(nn.Module):
@@ -13,7 +12,7 @@ class UNet(nn.Module):
         self.enc4 = Encoder(base_channels * 4, base_channels * 8)    # 256 -> 512
 
         # Bottleneck without pooling
-        self.bottleneck = Encoder(base_channels * 8, base_channels * 16, maxpooling=False)  # 512 -> 1024
+        self.bottleneck = Encoder(base_channels * 8, base_channels * 16, pooling=False)  # 512 -> 1024
 
         # Decoder with skip connection
         self.dec4 = Decoder(base_channels * 16, base_channels * 8, bilinear=bilinear)  # 1024 + 512 -> 512
@@ -25,34 +24,33 @@ class UNet(nn.Module):
         self.out_conv = OutConv(base_channels, num_classes)  # 64 -> num_classes
 
     def forward(self, x):
+        #print("input.shape:", x.shape)
+
         # Encoder
-        x1 = self.enc1(x)
-        x2 = self.enc2(x1)
-        x3 = self.enc3(x2)
-        x4 = self.enc4(x3)
+        x, skip1 = self.enc1(x)
+        #print("x1.shape:", skip1.shape)
+        x, skip2 = self.enc2(x)
+        #print("x2.shape:", skip2.shape)
+        x, skip3 = self.enc3(x)
+        #print("x3.shape:", skip3.shape)
+        x, skip4 = self.enc4(x)
+        #print("x4.shape:", skip4.shape)
 
         # Bottleneck
-        x5 = self.bottleneck(x4)
+        x, _ = self.bottleneck(x)
+        #print("x5.shape:", x.shape)
 
         # Decoder
-        x = self.dec4(x5, x4)
-        x = self.dec3(x, x3)
-        x = self.dec2(x, x2)
-        x = self.dec1(x, x1)
+        x = self.dec4(x, skip4)
+        #print("x_dec4.shape:", x.shape)
+        x = self.dec3(x, skip3)
+        #print("x_dec3.shape:", x.shape)
+        x = self.dec2(x, skip2)
+        #print("x_dec2.shape:", x.shape)
+        x = self.dec1(x, skip1)
+        #print("x_dec1.shape:", x.shape)
 
-        return self.out_conv(x)
+        x = self.out_conv(x)
+        #print("out_conv.shape:", x.shape)
 
-    def use_checkpointing(self, segments=2):
-        """ enable gradient checkpointing """
-
-        def apply_checkpoint(module):
-            if isinstance(module, nn.ModuleList):
-                return checkpoint_sequential(module, segments)
-            elif hasattr(module, 'encoder'):
-                module.encoder = checkpoint_sequential(module.encoder, segments)
-            elif hasattr(module, 'decoder'):
-                module.decoder = checkpoint_sequential(module.decoder, segments)
-
-        for m in [self.enc1, self.enc2, self.enc3, self.enc4, self.bottleneck,
-                  self.dec1, self.dec2, self.dec3, self.dec4]:
-            apply_checkpoint(m)
+        return x
