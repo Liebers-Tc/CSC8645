@@ -22,9 +22,9 @@ class Visualizer:
         image = self.denormalize(image)
         axes[0].imshow(image.permute(1, 2, 0).cpu())
         axes[0].set_title("Image")
-        axes[1].imshow(gt_mask.cpu())
+        axes[1].imshow(gt_mask.cpu(), cmap='tab20')
         axes[1].set_title("Ground Truth")
-        axes[2].imshow(pred_mask.cpu())
+        axes[2].imshow(pred_mask.cpu(), cmap='tab20')
         axes[2].set_title("Prediction")
         for ax in axes: ax.axis("off")
 
@@ -39,7 +39,7 @@ class Visualizer:
 
         plt.close(fig)
 
-    def save_demo(self, images, gts, preds):
-        for i in range(self.num_sample if self.num_sample is not None else len(images)):
-            save_path = os.path.join(self.save_dir, f"sample_{i+1}.png")
+    def save_demo(self, images, gts, preds, start_index=0):
+        for i in range(min(self.num_sample, len(images)) if self.num_sample is not None else len(images)):
+            save_path = os.path.join(self.save_dir, f"sample_{start_index + i + 1}.png")
             self.plot_demo(images[i], gts[i], preds[i], save_path=save_path)

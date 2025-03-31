@@ -2,7 +2,7 @@ import os
 import torch
 from torch.amp import autocast, GradScaler
 from utils.log import Logger
-from utils.visualization import Visualizer
+# from utils.visualization import Visualizer
 
 
 class Trainer:
@@ -33,7 +33,7 @@ class Trainer:
         self.save_dir = save_dir
         self.resume_path = resume_path
         
-        self.vis_num_sample = vis_num_sample
+        # self.vis_num_sample = vis_num_sample
         self.wandb = wandb
 
         self.scaler = GradScaler(enabled=use_amp)
@@ -41,12 +41,12 @@ class Trainer:
 
         self.ckpt_dir = os.path.join(save_dir, 'checkpoint')
         self.log_dir = os.path.join(save_dir, 'log')
-        self.vis_dir = os.path.join(save_dir, 'visualization')
+        # self.vis_dir = os.path.join(save_dir, 'visualization')
         os.makedirs(self.ckpt_dir, exist_ok=True)
         os.makedirs(self.log_dir, exist_ok=True)
-        os.makedirs(self.vis_dir, exist_ok=True)
+        # os.makedirs(self.vis_dir, exist_ok=True)
         self.logger = Logger(save_dir=self.log_dir, wandb=self.wandb)
-        self.visualizer = Visualizer(save_dir=self.vis_dir, save=True, show=False, wandb=wandb, num_sample=self.vis_num_sample)
+        # self.visualizer = Visualizer(save_dir=self.vis_dir, save=True, show=False, wandb=wandb, num_sample=self.vis_num_sample)
 
         self.train_history = {"loss": []}
         self.val_history = {"loss": []}
@@ -61,7 +61,10 @@ class Trainer:
         total_metric = {}
 
         with torch.set_grad_enabled(train):
+            # fixed_batch_size = None
             for i, (images, masks) in enumerate(dataloader):
+                # if fixed_batch_size is None:
+                #     fixed_batch_size = images.size(0)
                 images, masks = images.to(self.device), masks.to(self.device)
 
                 with autocast(device_type=self.device, enabled=self.use_amp):
@@ -82,7 +85,8 @@ class Trainer:
 
                 if not train and i == 0:
                     outputs = torch.argmax(outputs, dim=1)
-                    self.visualizer.save_demo(images, masks, outputs)
+                    # start_index = i * fixed_batch_size
+                    # self.visualizer.save_demo(images, masks, outputs, start_index=start_index)
 
         avg_loss = total_loss / len(dataloader)
         avg_metrics = {k: v / len(dataloader) for k, v in total_metric.items()}

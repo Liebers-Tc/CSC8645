@@ -2,8 +2,9 @@ import torch
 
 
 class MeanIoU:
-    def __init__(self, num_classes, ignore_index=None):
+    def __init__(self, num_classes, smooth=1e-6, ignore_index=None):
         self.num_classes = num_classes
+        self.smooth = smooth
         self.ignore_index = ignore_index
 
     def __call__(self, preds, targets):
@@ -14,16 +15,16 @@ class MeanIoU:
         for cls in range(self.num_classes):
             if cls == self.ignore_index:
                 continue
-            pred_inds = (preds == cls)
-            target_inds = (targets == cls)
-            intersection = (pred_inds & target_inds).sum().item()
-            union = (pred_inds | target_inds).sum().item()
+            pred_cls = (preds == cls).float()
+            target_cls = (targets == cls).float()
+            intersection = (pred_cls * target_cls).sum()
+            union = pred_cls.sum() + target_cls.sum() - intersection
             if union == 0:
-                ious.append(float('nan'))  # Avoid empty class interference average
+                ious.append(torch.tensor(float('nan'), device=preds.device))  # class not exist, default nan // Avoid empty class interference average
             else:
-                ious.append(intersection / union)
+                ious.append((intersection + self.smooth) / (union + self.smooth))
 
-        return torch.tensor(ious, device=preds.device).nanmean()  # return mIoU
+        return torch.nanmean(torch.stack(ious))  # return mIoU
 
 
 class DiceScore:
@@ -46,11 +47,11 @@ class DiceScore:
             intersection = (pred_cls * target_cls).sum()
             union = pred_cls.sum() + target_cls.sum()
             if union == 0:
-                dice_scores.append(torch.tensor(1.0, device=preds.device))  # class not exist, default dice=1
+                dice_scores.append(torch.tensor(float('nan'), device=preds.device))  # class not exist, default nan
             else:
                 dice_scores.append((2 * intersection + self.smooth) / (union + self.smooth))
         
-        return torch.stack(dice_scores).mean()
+        return torch.nanmean(torch.stack(dice_scores))
     
 
 class PixelAccuracy:

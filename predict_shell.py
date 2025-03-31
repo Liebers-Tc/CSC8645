@@ -51,13 +51,14 @@ def main():
 
     # Predict
     with torch.no_grad():
-        for idx, (images, masks) in enumerate(test_loader):
+        for step, (images, masks) in enumerate(test_loader):
             images, masks = images.to(device), masks.to(device)
             with torch.autocast(device_type=device, enabled=args.use_amp):
                 outputs = model(images)
 
             outputs = torch.argmax(outputs, dim=1)
-            visualizer.save_demo(images, masks, outputs)
+            start_index = step * args.batch_size
+            visualizer.save_demo(images, masks, outputs, start_index=start_index)
 
     print(f"\nPrediction images saved to: {save_dir}")
 
