@@ -31,7 +31,6 @@ def parse_args():
     
     parser.add_argument('--pretrain_path', type=str, default=None)
     parser.add_argument('--save_dir', type=str, default=None)
-    parser.add_argument('--vis_num_sample', type=int, default=1)
     parser.add_argument('--use_amp', action='store_true')
     parser.add_argument('--wandb', action='store_true')
     
@@ -62,7 +61,7 @@ def main():
 
     # Optimizer & Scheduler
     optimizer = get_optimizer(model, args.optimizer, args.learning_rate, args.weight_decay)
-    scheduler = get_scheduler(optimizer, args.scheduler)
+    scheduler = get_scheduler(optimizer, args.scheduler, main_metric=main_metric)
 
     # Trainer
     trainer = Trainer(model=model,
@@ -78,7 +77,6 @@ def main():
                       use_amp=args.use_amp,
                       save_dir=save_dir,
                       resume_path=args.pretrain_path,
-                      vis_num_sample=args.vis_num_sample,
                       wandb=args.wandb,
                       )
 

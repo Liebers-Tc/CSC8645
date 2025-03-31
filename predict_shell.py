@@ -18,7 +18,6 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=8)
     parser.add_argument('--pretrain_path', type=str, required=True)
     parser.add_argument('--save_dir', type=str, default=None, required=True)
-    parser.add_argument('--vis_num_sample', type=int, default=1)
     parser.add_argument('--use_amp', action='store_true')
     parser.add_argument('--wandb', action='store_true')
 
@@ -47,7 +46,7 @@ def main():
     os.makedirs(save_dir, exist_ok=True)
 
     # Visualizer
-    visualizer = Visualizer(save_dir=save_dir, save=True, show=False, wandb=args.wandb, num_sample=args.vis_num_sample)
+    visualizer = Visualizer(save_dir=save_dir, save=True, show=False, wandb=args.wandb)
 
     # Predict
     with torch.no_grad():

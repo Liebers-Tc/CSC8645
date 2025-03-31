@@ -27,10 +27,17 @@ def get_scheduler(optimizer, name='step', **kwargs):
         # default: T_max=50
         return optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=kwargs.get('T_max', 50))
     elif name == 'plateau':
-        # default: mode='min', patience=5
-        return optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode=kwargs.get('mode', 'min'),
-                                                    patience=kwargs.get('patience', 5),
-                                                    factor=kwargs.get('factor', 0.1))
+        main_metric = kwargs.get('main_metric', 'loss')
+        default_mode = 'min' if 'loss' in main_metric.lower() else 'max'
+
+        return optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=kwargs.get('mode', default_mode),
+            patience=kwargs.get('patience', 3),
+            factor=kwargs.get('factor', 0.1),
+            threshold=kwargs.get('threshold', 1e-4),
+            min_lr=kwargs.get('min_lr', 1e-7),
+            )
     elif name == 'none':
         return None
     else:

@@ -11,8 +11,8 @@ class Trainer:
                  optimizer, scheduler, 
                  early_stopping_patience, 
                  device, use_amp, 
-                 save_dir, resume_path=None,  
-                 vis_num_sample=1, wandb=False):
+                 save_dir, resume_path=None, 
+                 wandb=False):
         
         self.model = model.to(device)
         self.train_loader = train_loader
@@ -32,8 +32,6 @@ class Trainer:
         self.use_amp = use_amp
         self.save_dir = save_dir
         self.resume_path = resume_path
-        
-        # self.vis_num_sample = vis_num_sample
         self.wandb = wandb
 
         self.scaler = GradScaler(enabled=use_amp)
@@ -46,7 +44,7 @@ class Trainer:
         os.makedirs(self.log_dir, exist_ok=True)
         # os.makedirs(self.vis_dir, exist_ok=True)
         self.logger = Logger(save_dir=self.log_dir, wandb=self.wandb)
-        # self.visualizer = Visualizer(save_dir=self.vis_dir, save=True, show=False, wandb=wandb, num_sample=self.vis_num_sample)
+        # self.visualizer = Visualizer(save_dir=self.vis_dir, save=True, show=False, wandb=wandb)
 
         self.train_history = {"loss": []}
         self.val_history = {"loss": []}
@@ -154,6 +152,7 @@ class Trainer:
             if self.scheduler:
                 if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                     self.scheduler.step(val_stats.get(self.main_metric, val_stats['loss']))
+                    print("Current learning rate:", self.scheduler.get_last_lr())
                 else:
                     self.scheduler.step()
             

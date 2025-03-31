@@ -3,11 +3,10 @@ import torch
 import matplotlib.pyplot as plt
 
 class Visualizer:
-    def __init__(self, save_dir, save=True, show=False, num_sample=None, wandb=False):
+    def __init__(self, save_dir, save=True, show=False, wandb=False):
         self.save_dir = save_dir
         self.save = save
         self.show = show
-        self.num_sample = num_sample
         self.wandb = wandb
         os.makedirs(save_dir, exist_ok=True)
         
@@ -40,6 +39,6 @@ class Visualizer:
         plt.close(fig)
 
     def save_demo(self, images, gts, preds, start_index=0):
-        for i in range(min(self.num_sample, len(images)) if self.num_sample is not None else len(images)):
+        for i in range(len(images)):
             save_path = os.path.join(self.save_dir, f"sample_{start_index + i + 1}.png")
             self.plot_demo(images[i], gts[i], preds[i], save_path=save_path)

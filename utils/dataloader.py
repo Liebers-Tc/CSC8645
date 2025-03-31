@@ -18,13 +18,13 @@ class FoodSegDataset(Dataset):
         self.image_list = sorted(list(self.image_dir.glob('*.jpg')))
         
         self.image_transform = T.Compose([
-            T.Resize((256, 256)),
+            # T.Resize((256, 256), interpolation=Image.BILINEAR),
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406],
                         std=[0.229, 0.224, 0.225])
                         ])
         self.mask_transform = T.Compose([
-            T.Resize((256, 256), interpolation=Image.NEAREST),
+            # T.Resize((256, 256), interpolation=Image.NEAREST),
             T.Lambda(mask_to_tensor)
             ])
         
