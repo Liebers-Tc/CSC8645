@@ -2,6 +2,9 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 from model.unet_model import UNet
+from model.skip4_resnetcbamaspp_model import ResNetCBAMASPP as ResNet_skip4
+from model.skip3_resnetcbamaspp_model import ResNetCBAMASPP as ResNet_skip3
+from model.resnetcbamaspp_model import ResNetCBAMASPP as ResNet
 from utils.dataloader import FoodSegDataset
 from utils.loss import get_loss
 from utils.metrics import get_metric
@@ -33,6 +36,7 @@ def parse_args():
     parser.add_argument('--save_dir', type=str, default=None)
     parser.add_argument('--use_amp', action='store_true')
     parser.add_argument('--wandb', action='store_true')
+    parser.add_argument('--backbone', type=str)
     
     return parser.parse_args()
 
@@ -51,6 +55,12 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if args.model_name == 'unet':
         model = UNet(in_channels=args.in_channels, num_classes=args.num_classes).to(device)
+    elif args.model_name == 'resnet_skip4':
+        model = ResNet_skip4(num_classes=args.num_classes, backbone=args.backbone, encoder_pretrained=True).to(device)
+    elif args.model_name == 'resnet_skip3':
+        model = ResNet_skip3(num_classes=args.num_classes, backbone=args.backbone, encoder_pretrained=True).to(device)
+    elif args.model_name == 'resnet':
+        model = ResNet(num_classes=args.num_classes, backbone=args.backbone, encoder_pretrained=True).to(device)
     else:
         raise ValueError(f"Unsupported model: {args.model_name}")
 
@@ -67,6 +77,7 @@ def main():
     trainer = Trainer(model=model,
                       train_loader=train_loader,
                       val_loader=val_loader,
+                      epochs=args.epochs,
                       loss_fn=loss_fn,
                       metric_fn=metric_fn,
                       main_metric=main_metric,
@@ -82,7 +93,7 @@ def main():
 
     # Start Training
     trainer.load_checkpoint()
-    trainer.fit(args.epochs)
+    trainer.fit()
 
 
 if __name__ == '__main__':

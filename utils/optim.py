@@ -33,9 +33,9 @@ def get_scheduler(optimizer, name='step', **kwargs):
         return optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode=kwargs.get('mode', default_mode),
-            patience=kwargs.get('patience', 3),
+            patience=kwargs.get('patience', 5),
             factor=kwargs.get('factor', 0.1),
-            threshold=kwargs.get('threshold', 1e-4),
+            threshold=kwargs.get('threshold', 1e-3),
             min_lr=kwargs.get('min_lr', 1e-7),
             )
     elif name == 'none':

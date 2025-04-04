@@ -6,7 +6,7 @@ from utils.log import Logger
 
 
 class Trainer:
-    def __init__(self, model, train_loader, val_loader, 
+    def __init__(self, model, train_loader, val_loader, epochs, 
                  loss_fn, metric_fn, main_metric, 
                  optimizer, scheduler, 
                  early_stopping_patience, 
@@ -17,6 +17,7 @@ class Trainer:
         self.model = model.to(device)
         self.train_loader = train_loader
         self.val_loader = val_loader
+        self.epochs = epochs
 
         self.loss_fn = loss_fn
         self.metric_fn = metric_fn
@@ -93,7 +94,7 @@ class Trainer:
     def save_checkpoint(self, epoch, filename):
         filepath = os.path.join(self.ckpt_dir, f"model_{filename}.pth")
         torch.save({
-            "epoch": epoch,
+            "epoch": epoch + 1,
             "model_state_dict": self.model.state_dict(),
             "optimizer_state_dict": self.optimizer.state_dict(),
             "scheduler_state_dict": self.scheduler.state_dict() if self.scheduler else None,
@@ -123,9 +124,15 @@ class Trainer:
 
             print(f"Resume model from: {self.resume_path}")
 
-    def fit(self, epochs):
-        for epoch in range(self.start_epoch + 1, epochs + 1):
-            print(f"\n[Epoch {epoch}/{epochs}]")
+    def fit(self):
+        if self.start_epoch >= self.epochs:
+            raise ValueError(
+                f"Resume epoch ({self.start_epoch}) >= target epochs ({self.epochs})\n"
+                f"Increase --epochs above {self.start_epoch} to continue training."
+            )
+        
+        for epoch in range(self.start_epoch + 1, self.epochs + 1):
+            print(f"\n[Epoch {epoch}/{self.epochs}]")
 
             train_stats = self.run_one_epoch(train=True)
             val_stats = self.run_one_epoch(train=False)
@@ -144,17 +151,17 @@ class Trainer:
                     self.val_metrics.setdefault(k, []).append(v) # append val metrics to self.val_metrics
                     self.logger.log_scalar(f"{k}/val", v, step=epoch)
 
-            log_msg = f"Epoch {epoch}: train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, " + \
-                      ", ".join([f"{k}={v:.4f}" for k, v in val_stats.items() if k != 'loss'])
-            print(log_msg)
-            self.logger.log_text(log_msg)
-
             if self.scheduler:
                 if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
                     self.scheduler.step(val_stats.get(self.main_metric, val_stats['loss']))
-                    print("Current learning rate:", self.scheduler.get_last_lr())
                 else:
                     self.scheduler.step()
+
+            log_msg = f"Epoch {epoch}: train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, " + \
+                      ", ".join([f"{k}={v:.4f}" for k, v in val_stats.items() if k != 'loss']) + \
+                      f"\nCurrent learning rate: {self.scheduler.get_last_lr()}"
+            print(log_msg)
+            self.logger.log_text(log_msg)
             
             main_value = val_stats[self.main_metric]
             value = (main_value > self.best_score) if self.greater_is_better else (main_value < self.best_score)
@@ -162,10 +169,15 @@ class Trainer:
                 self.best_score = main_value
                 self.early_stop_counter = 0
                 self.save_checkpoint(epoch, filename="best")
+                best_msg = "Best model updated"
+                print(best_msg)
+                self.logger.log_text(best_msg)
             else:
                 self.early_stop_counter += 1
                 if self.early_stopping_patience and self.early_stop_counter >= self.early_stopping_patience:
-                    print("Early stopping triggered.")
+                    early_msg = "Early stopping triggered"
+                    print(early_msg)
+                    self.logger.log_text(early_msg)
                     break
 
         self.save_checkpoint(epoch, filename="final")
